@@ -46,8 +46,6 @@ export class Table2{
   id: number;
   @Column({name: 'TABLE_1_ID'})
   table1Id: number;
-  @Column({name: "NAME2"})
-  name: string;
 }
 
 
@@ -352,7 +350,6 @@ class Test{
     }
 
     test5(){
-        console.log('\nTEST 5\n');
         return this.getConnection().then(connection => {
              return connection.createQueryBuilder().select(['t1.id', 't1.name'])
              .from(Table1, 't1')
@@ -360,6 +357,7 @@ class Test{
              .leftJoin(Table2, 't2', 't1.id = t2.table1Id')
              .groupBy('t1.id').addGroupBy('t1.name')
              .orderBy('count')
+            //  .skip(0).take(2)
         }).then(q => this.runTest(q));
     }
 
@@ -367,25 +365,33 @@ class Test{
         console.log('\nTEST 6\n');
         const loggedUserId = 'ruumie2';
         return this.getConnection().then(connection => {
-             return connection.createQueryBuilder()
-                                 .select('ruum').from(Ruum, 'ruum')
-                                 .addSelect('favorite.userId "IS_FAVORITE"')
-                                 .addSelect('count(*) as "CHANGES"')
-                                 /** innerJoin so that only ruums where there is a participation */
-                                 .innerJoin(RuumParticipation, 'participation', `ruum.id = participation.ruumId AND participation.userId = :loggedUserId`, {loggedUserId} )
-                                 .leftJoin(RuumFavorite, 'favorite', `ruum.id = favorite.ruumId AND favorite.userId = :loggedUserId`, {loggedUserId} )
-                                 .leftJoin(ChangeWhileGone, 'change', `change.didSeeAt is NULL AND change.ruumId = ruum.id AND change."CREATED_BY" != :loggedUserId AND change.participantToSee = :loggedUserId`, {loggedUserId} )
-                                 .groupBy('ruum.id').addGroupBy('ruum.name').addGroupBy('ruum.status')
-                                 .addGroupBy('ruum.createdAt').addGroupBy('ruum.createdBy').addGroupBy('ruum.changedAt')
-                                 .addGroupBy('ruum.changedBy').addGroupBy('"IS_FAVORITE"')
-                                 .skip(0).take(2)
+             const queryByuilder = connection.createQueryBuilder();
 
+            queryByuilder.select('ruum').from(Ruum, 'ruum')
+            .addSelect('favorite.userId "IS_FAVORITE"')
+            .addSelect('count(*) as "CHANGES"')
+            /** innerJoin so that only ruums where there is a participation */
+            .innerJoin(RuumParticipation, 'participation', `ruum.id = participation.ruumId AND participation.userId = :loggedUserId`, {loggedUserId} )
+            
+            .leftJoin(RuumFavorite, 'favorite', `ruum.id = favorite.ruumId AND favorite.userId = :loggedUserId`, {loggedUserId} )
+            .leftJoin(ChangeWhileGone, 'change', `change.didSeeAt is NULL AND change.ruumId = ruum.id AND change."CREATED_BY" != :loggedUserId AND change.participantToSee = :loggedUserId`, {loggedUserId} )
+            .groupBy('ruum.id').addGroupBy('ruum.name').addGroupBy('ruum.status')
+            .addGroupBy('ruum.createdAt').addGroupBy('ruum.createdBy').addGroupBy('ruum.changedAt')
+            .addGroupBy('ruum.changedBy').addGroupBy('"IS_FAVORITE"')
+            
+            // .skip(0).take(2)
+
+            return queryByuilder;
         }).then(q => this.runTest(q));
+    }
+
+    private addFilters(){
+
     }
 
     runTest(queryBuilder: SelectQueryBuilder<any>){
         console.log(queryBuilder.getSql());
-        return queryBuilder.getRawMany()
+        return queryBuilder.getManyAndCount()
                             .then(data => console.log(data))
                             .catch(err => console.error(err));
     }
