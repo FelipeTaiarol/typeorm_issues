@@ -38,6 +38,8 @@ export class Table1{
   id: number;
   @Column({name: "NAME"})
   name: string;
+
+  t2s: Table2[];
 }
 
 @Entity('TABLE_2')
@@ -349,17 +351,38 @@ class Test{
         }).then(q => this.runTest(q));
     }
 
-    test5(){
+    test5a(){
         return this.getConnection().then(connection => {
-             return connection.createQueryBuilder().select(['t1.id', 't1.name'])
-             .from(Table1, 't1')
-             .addSelect('count(1)', 'count')
-             .leftJoin(Table2, 't2', 't1.id = t2.table1Id')
-             .groupBy('t1.id').addGroupBy('t1.name')
-             .orderBy('count')
-            //  .skip(0).take(2)
+            return connection.createQueryBuilder().select(['t1.id', 't1.name'])
+            .from(Table1, 't1')
+            .addSelect('count(1)', 'count')
+            .leftJoin(Table2, 't2', 't1.id = t2.table1Id')
+            .groupBy('t1.id').addGroupBy('t1.name')
+            .orderBy('count')
+            // .skip(0).take(2)
         }).then(q => this.runTest(q));
     }
+
+    test5b(){
+        return this.getConnection().then(connection => {
+            return connection.createQueryBuilder()
+                .select('t1').from(Table1, 't1')
+                .innerJoin(qb => {
+                    const sub = qb.subQuery();
+                    sub.select(['t1.id', 't1.name'])
+                                     .from(Table1, 't1')
+                                     .addSelect('count(1)', 'count')
+                                     .leftJoin(Table2, 't2', 't1.id = t2.table1Id')
+                                     .groupBy('t1.id').addGroupBy('t1.name')
+                                     .orderBy('count', 'DESC');
+                    return sub;
+                }, 'filter', 't1.id = filter."t1_ID"')
+                /** inner join above should filter order and paginate data. */
+                .leftJoinAndMapMany('t1.t2s', Table2, 't2', 't1.id = t2.table1Id')
+        }).then(q => this.runTest(q));
+    }
+
+    
 
     test6(){
         console.log('\nTEST 6\n');
@@ -385,6 +408,10 @@ class Test{
         }).then(q => this.runTest(q));
     }
 
+    test7(){
+
+    }
+
     private addFilters(){
 
     }
@@ -392,14 +419,16 @@ class Test{
     runTest(queryBuilder: SelectQueryBuilder<any>){
         console.log(queryBuilder.getSql());
         return queryBuilder.getManyAndCount()
-                            .then(data => console.log(data))
+                            .then(data => {
+                                console.log(data)
+                            })
                             .catch(err => console.error(err));
     }
 }
 
 const test = new Test();
 
-test.test6();
+test.test5b();
 
 // Promise.resolve().then(() => {
 //     return test.test1();
