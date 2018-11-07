@@ -9,7 +9,7 @@
         "emitDecoratorMetadata": true,
         "noImplicitAny": false,
         "sourceMap": true,
-        "watch": true
+        "watch": false
     },
     "exclude": [
         "node_modules"
